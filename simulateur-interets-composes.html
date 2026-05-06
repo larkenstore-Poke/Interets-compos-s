@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Simulateur d'intérêts composés sur 40 ans avec capital initial, versement mensuel, taux et inflation ajustables.">
+<title>Simulateur d'intérêts composés</title>
+<style>
+  :root {
+    --bg: #faf9f5;
+    --surface: #ffffff;
+    --surface-2: #f1efe8;
+    --text: #1a1a1a;
+    --text-2: #5f5e5a;
+    --text-3: #888780;
+    --border: rgba(0, 0, 0, 0.12);
+    --accent: #0f6e56;
+    --accent-soft: rgba(29, 158, 117, 0.55);
+    --neutral: #5f5e5a;
+    --neutral-soft: rgba(136, 135, 128, 0.55);
+    --danger: #a32d2d;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a1a;
+      --surface: #262624;
+      --surface-2: #2c2c2a;
+      --text: #f1efe8;
+      --text-2: #b4b2a9;
+      --text-3: #888780;
+      --border: rgba(255, 255, 255, 0.12);
+      --accent: #5dcaa5;
+      --accent-soft: rgba(93, 202, 165, 0.4);
+      --neutral: #b4b2a9;
+      --neutral-soft: rgba(180, 178, 169, 0.35);
+      --danger: #f09595;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 2rem 1.25rem 4rem;
+  }
+
+  header {
+    margin-bottom: 2rem;
+  }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 500;
+    margin: 0 0 0.5rem;
+    letter-spacing: -0.01em;
+  }
+
+  .subtitle {
+    color: var(--text-2);
+    font-size: 15px;
+    margin: 0;
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 1.25rem;
+  }
+
+  @media (min-width: 600px) {
+    .stats {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  .stat {
+    background: var(--surface-2);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+  }
+
+  .stat-label {
+    font-size: 13px;
+    color: var(--text-2);
+    margin-bottom: 4px;
+  }
+
+  .stat-value {
+    font-size: 22px;
+    font-weight: 500;
+    line-height: 1.2;
+  }
+
+  .stat-value.gain {
+    color: var(--accent);
+  }
+
+  .stat-value.small {
+    font-size: 17px;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+    box-shadow: var(--shadow);
+  }
+
+  .control {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .control:last-child { margin-bottom: 0; }
+
+  .control label {
+    font-size: 14px;
+    color: var(--text-2);
+    flex: 0 0 150px;
+  }
+
+  .control input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+  }
+
+  .control input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--text);
+    cursor: pointer;
+    border: none;
+  }
+
+  .control input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--text);
+    cursor: pointer;
+    border: none;
+  }
+
+  .control .value {
+    font-size: 14px;
+    font-weight: 500;
+    flex: 0 0 110px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-top: 14px;
+    margin-top: 14px;
+    border-top: 0.5px solid var(--border);
+    font-size: 14px;
+    color: var(--text-2);
+  }
+
+  .toggle {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+  }
+
+  .toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background: var(--border);
+    border-radius: 24px;
+    transition: 0.2s;
+  }
+
+  .slider::before {
+    content: "";
+    position: absolute;
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    top: 3px;
+    background: var(--surface);
+    border-radius: 50%;
+    transition: 0.2s;
+  }
+
+  .toggle input:checked + .slider {
+    background: var(--accent);
+  }
+
+  .toggle input:checked + .slider::before {
+    transform: translateX(20px);
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 8px;
+    font-size: 12px;
+    color: var(--text-2);
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .legend-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    display: inline-block;
+  }
+
+  .chart-wrap {
+    position: relative;
+    width: 100%;
+    height: 320px;
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    box-shadow: var(--shadow);
+  }
+
+  footer {
+    margin-top: 2rem;
+    font-size: 13px;
+    color: var(--text-3);
+    line-height: 1.6;
+  }
+
+  footer h3 {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-2);
+    margin: 1rem 0 0.5rem;
+  }
+
+  footer ul {
+    margin: 0;
+    padding-left: 1.25rem;
+  }
+
+  footer li {
+    margin-bottom: 4px;
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Simulateur d'intérêts composés</h1>
+      <p class="subtitle">Visualise la croissance de ton épargne sur le long terme — capitalisation mensuelle.</p>
+    </header>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-label">Capital final</div>
+        <div class="stat-value" id="out-final">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Intérêts gagnés</div>
+        <div class="stat-value gain" id="out-gains">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Total versé</div>
+        <div class="stat-value small" id="out-verse">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Multiplicateur</div>
+        <div class="stat-value small" id="out-mult">—</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="control">
+        <label for="capital">Capital de départ</label>
+        <input type="range" min="0" max="200000" value="5000" step="500" id="capital">
+        <span class="value" id="out-capital">5 000 €</span>
+      </div>
+      <div class="control">
+        <label for="mensuel">Versement mensuel</label>
+        <input type="range" min="0" max="5000" value="200" step="50" id="mensuel">
+        <span class="value" id="out-mensuel">200 €</span>
+      </div>
+      <div class="control">
+        <label for="taux">Taux annuel</label>
+        <input type="range" min="0" max="15" value="7" step="0.1" id="taux">
+        <span class="value" id="out-taux">7,0 %</span>
+      </div>
+      <div class="control">
+        <label for="duree">Durée</label>
+        <input type="range" min="1" max="40" value="25" step="1" id="duree">
+        <span class="value" id="out-duree">25 ans</span>
+      </div>
+      <div class="control">
+        <label for="inflation">Inflation annuelle</label>
+        <input type="range" min="0" max="8" value="2" step="0.1" id="inflation">
+        <span class="value" id="out-inflation">2,0 %</span>
+      </div>
+
+      <div class="toggle-row">
+        <span>Afficher en euros constants (ajustés de l'inflation)</span>
+        <label class="toggle">
+          <input type="checkbox" id="constants">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="toggle-row">
+        <span>Appliquer la flat tax (30 %) sur les gains</span>
+        <label class="toggle">
+          <input type="checkbox" id="flat-tax">
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span class="legend-item"><span class="legend-swatch" style="background: #5f5e5a;"></span>Capital + versements cumulés</span>
+      <span class="legend-item"><span class="legend-swatch" style="background: var(--accent);"></span>Intérêts générés</span>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="chart" role="img" aria-label="Évolution du capital année par année"></canvas>
+    </div>
+
+    <footer>
+      <h3>Hypothèses du calcul</h3>
+      <ul>
+        <li>Capitalisation mensuelle : taux mensuel équivalent = (1 + taux annuel)^(1/12) − 1.</li>
+        <li>Versements ajoutés en fin de mois (mode « à terme échu »).</li>
+        <li>Mode euros constants : le résultat est divisé par (1 + inflation)^années pour exprimer la valeur en pouvoir d'achat d'aujourd'hui.</li>
+        <li>Flat tax : appliquée uniquement sur les intérêts (CTO, livrets fiscalisés). À désactiver pour PEA &gt; 5 ans, assurance-vie &gt; 8 ans (cas spécifiques) ou PER.</li>
+      </ul>
+    </footer>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script>
+  (function () {
+    const fmt = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
+    const fmtEur = (v) => fmt.format(Math.round(v)) + ' €';
+
+    const capEl = document.getElementById('capital');
+    const menEl = document.getElementById('mensuel');
+    const tauEl = document.getElementById('taux');
+    const durEl = document.getElementById('duree');
+    const infEl = document.getElementById('inflation');
+    const constEl = document.getElementById('constants');
+    const flatEl = document.getElementById('flat-tax');
+
+    const outCap = document.getElementById('out-capital');
+    const outMen = document.getElementById('out-mensuel');
+    const outTau = document.getElementById('out-taux');
+    const outDur = document.getElementById('out-duree');
+    const outInf = document.getElementById('out-inflation');
+    const outFinal = document.getElementById('out-final');
+    const outGains = document.getElementById('out-gains');
+    const outVerse = document.getElementById('out-verse');
+    const outMult = document.getElementById('out-mult');
+
+    let chart;
+
+    function pctFr(v) {
+      return v.toFixed(1).replace('.', ',') + ' %';
+    }
+
+    function compute() {
+      const C0 = parseFloat(capEl.value);
+      const M = parseFloat(menEl.value);
+      const r = parseFloat(tauEl.value) / 100;
+      const N = parseInt(durEl.value, 10);
+      const inf = parseFloat(infEl.value) / 100;
+      const useConstants = constEl.checked;
+      const useFlatTax = flatEl.checked;
+
+      const rm = Math.pow(1 + r, 1 / 12) - 1;
+
+      const labels = [];
+      const verseSerie = [];
+      const interetsSerie = [];
+
+      let solde = C0;
+      let verse = C0;
+
+      labels.push(0);
+      verseSerie.push(verse);
+      interetsSerie.push(0);
+
+      for (let an = 1; an <= N; an++) {
+        for (let m = 0; m < 12; m++) {
+          solde = solde * (1 + rm) + M;
+          verse += M;
+        }
+
+        let interets = solde - verse;
+        if (useFlatTax) interets *= 0.7;
+
+        let verseShown = verse;
+        let interetsShown = interets;
+
+        if (useConstants) {
+          const deflator = Math.pow(1 + inf, an);
+          verseShown = verse / deflator;
+          interetsShown = interets / deflator;
+        }
+
+        labels.push(an);
+        verseSerie.push(verseShown);
+        interetsSerie.push(interetsShown);
+      }
+
+      const finalShown = verseSerie[verseSerie.length - 1] + interetsSerie[interetsSerie.length - 1];
+      const verseFinalShown = verseSerie[verseSerie.length - 1];
+      const interetsFinalShown = interetsSerie[interetsSerie.length - 1];
+
+      outCap.textContent = fmtEur(C0);
+      outMen.textContent = fmtEur(M);
+      outTau.textContent = pctFr(r * 100);
+      outDur.textContent = N + ' an' + (N > 1 ? 's' : '');
+      outInf.textContent = pctFr(inf * 100);
+
+      outFinal.textContent = fmtEur(finalShown);
+      outGains.textContent = fmtEur(interetsFinalShown);
+      outVerse.textContent = fmtEur(verseFinalShown);
+      outMult.textContent = (verseFinalShown > 0 ? (finalShown / verseFinalShown).toFixed(2).replace('.', ',') : '—') + ' ×';
+
+      const styles = getComputedStyle(document.documentElement);
+      const accent = styles.getPropertyValue('--accent').trim();
+      const accentSoft = styles.getPropertyValue('--accent-soft').trim();
+      const neutral = styles.getPropertyValue('--neutral').trim();
+      const neutralSoft = styles.getPropertyValue('--neutral-soft').trim();
+      const text3 = styles.getPropertyValue('--text-3').trim();
+      const border = styles.getPropertyValue('--border').trim();
+
+      if (chart) {
+        chart.data.labels = labels;
+        chart.data.datasets[0].data = verseSerie;
+        chart.data.datasets[1].data = interetsSerie;
+        chart.update('none');
+      } else {
+        const ctx = document.getElementById('chart');
+        chart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [
+              {
+                label: 'Versements',
+                data: verseSerie,
+                backgroundColor: neutralSoft,
+                borderColor: neutral,
+                borderWidth: 1,
+                fill: 'origin',
+                pointRadius: 0,
+                tension: 0.25
+              },
+              {
+                label: 'Intérêts',
+                data: interetsSerie,
+                backgroundColor: accentSoft,
+                borderColor: accent,
+                borderWidth: 1,
+                fill: '-1',
+                pointRadius: 0,
+                tension: 0.25
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  title: (items) => 'Année ' + items[0].label,
+                  label: (ctx) => ctx.dataset.label + ' : ' + fmtEur(ctx.parsed.y),
+                  footer: (items) => {
+                    const total = items.reduce((s, it) => s + it.parsed.y, 0);
+                    return 'Total : ' + fmtEur(total);
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                title: { display: true, text: 'Années', color: text3, font: { size: 12 } },
+                ticks: { color: text3, font: { size: 11 } },
+                grid: { display: false }
+              },
+              y: {
+                stacked: true,
+                ticks: {
+                  color: text3,
+                  font: { size: 11 },
+                  callback: (v) => {
+                    if (v >= 1e6) return (v / 1e6).toFixed(1).replace('.', ',') + ' M€';
+                    if (v >= 1e3) return Math.round(v / 1e3) + ' k€';
+                    return Math.round(v) + ' €';
+                  }
+                },
+                grid: { color: border }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    [capEl, menEl, tauEl, durEl, infEl, constEl, flatEl].forEach(el => {
+      el.addEventListener('input', compute);
+      el.addEventListener('change', compute);
+    });
+
+    compute();
+  })();
+  </script>
+</body>
+</html>
